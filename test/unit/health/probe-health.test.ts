@@ -28,4 +28,26 @@ describe("component health probes", () => {
     expect(result.detail).toBe("Probe timed out");
     expect(JSON.stringify(result)).not.toContain("should-not-leak");
   });
+
+  it("aborts the underlying operation when a probe times out", async () => {
+    let aborted = false;
+    const result = await probeHealth({
+      component: "dograh",
+      timeoutMs: 5,
+      probe: (signal) =>
+        new Promise((_resolve, reject) => {
+          signal.addEventListener(
+            "abort",
+            () => {
+              aborted = true;
+              reject(signal.reason);
+            },
+            { once: true },
+          );
+        }),
+    });
+
+    expect(result).toMatchObject({ status: "down", detail: "Probe timed out" });
+    expect(aborted).toBe(true);
+  });
 });

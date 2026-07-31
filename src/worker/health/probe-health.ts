@@ -11,20 +11,24 @@ export interface HealthProbeResult {
 export interface HealthProbeOptions {
   component: string;
   timeoutMs: number;
-  probe: () => Promise<{ detail: string; status?: "healthy" | "degraded" }>;
+  probe: (signal: AbortSignal) => Promise<{ detail: string; status?: "healthy" | "degraded" }>;
 }
 
 class ProbeTimeoutError extends Error {}
 
 export async function probeHealth(options: HealthProbeOptions): Promise<HealthProbeResult> {
   const startedAt = performance.now();
+  const controller = new AbortController();
   let timer: NodeJS.Timeout | undefined;
   const timeout = new Promise<never>((_resolve, reject) => {
-    timer = setTimeout(() => reject(new ProbeTimeoutError()), options.timeoutMs);
+    timer = setTimeout(() => {
+      reject(new ProbeTimeoutError());
+      controller.abort();
+    }, options.timeoutMs);
   });
 
   try {
-    const probeResult = await Promise.race([options.probe(), timeout]);
+    const probeResult = await Promise.race([options.probe(controller.signal), timeout]);
     return {
       component: options.component,
       status: probeResult.status ?? "healthy",
@@ -36,7 +40,10 @@ export async function probeHealth(options: HealthProbeOptions): Promise<HealthPr
     return {
       component: options.component,
       status: "down",
-      detail: error instanceof ProbeTimeoutError ? "Probe timed out" : "Probe failed",
+      detail:
+        error instanceof ProbeTimeoutError || controller.signal.aborted
+          ? "Probe timed out"
+          : "Probe failed",
       checkedAt: new Date(),
       latencyMs: Math.round(performance.now() - startedAt),
     };

@@ -68,9 +68,10 @@ async function main(): Promise<void> {
               runHealthCheck(connection.db, organizationId, {
                 component: "dograh",
                 timeoutMs: 5_000,
-                probe: async () => {
+                probe: async (signal) => {
                   const response = await fetch(
                     `${process.env.DOGRAH_API_URL?.replace(/\/$/, "")}/api/v1/health`,
+                    { signal },
                   );
                   if (!response.ok) throw new Error("Dograh health check failed");
                   return { detail: `Voice API responded with HTTP ${response.status}` };
