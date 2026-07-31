@@ -1,6 +1,8 @@
+import { desc, eq } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import type { Database } from "../db/client.js";
+import { importBatches } from "../db/schema/imports.js";
 import {
   approveImport,
   commitImport,
@@ -24,6 +26,18 @@ const stageImportSchema = z.object({
 });
 
 export function registerImportRoutes(app: FastifyInstance, database: Database): void {
+  app.get("/api/imports", async (request, reply) => {
+    const query = previewQuerySchema.safeParse(request.query);
+    if (!query.success) {
+      return reply.status(400).send({ error: "Invalid import history request" });
+    }
+    return database
+      .select()
+      .from(importBatches)
+      .where(eq(importBatches.organizationId, query.data.organizationId))
+      .orderBy(desc(importBatches.createdAt));
+  });
+
   app.post("/api/imports/stage", async (request, reply) => {
     const body = stageImportSchema.safeParse(request.body);
     if (!body.success) {

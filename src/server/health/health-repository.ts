@@ -12,6 +12,8 @@ export interface HealthSnapshotInput {
   checkedAt: Date;
 }
 
+const healthFreshnessMs = 90_000;
+
 export async function recordHealthSnapshot(db: Database, input: HealthSnapshotInput) {
   const [snapshot] = await db.insert(healthSnapshots).values(input).returning();
 
@@ -22,8 +24,8 @@ export async function recordHealthSnapshot(db: Database, input: HealthSnapshotIn
   return snapshot;
 }
 
-export function listLatestHealth(db: Database, organizationId: string) {
-  return db
+export async function listLatestHealth(db: Database, organizationId: string) {
+  const snapshots = await db
     .selectDistinctOn([healthSnapshots.organizationId, healthSnapshots.component])
     .from(healthSnapshots)
     .where(eq(healthSnapshots.organizationId, organizationId))
@@ -32,4 +34,15 @@ export function listLatestHealth(db: Database, organizationId: string) {
       asc(healthSnapshots.component),
       desc(healthSnapshots.checkedAt),
     );
+
+  const staleBefore = Date.now() - healthFreshnessMs;
+  return snapshots.map((snapshot) =>
+    snapshot.checkedAt.getTime() < staleBefore
+      ? {
+          ...snapshot,
+          status: "unknown" as const,
+          detail: "Last verified check is stale",
+        }
+      : snapshot,
+  );
 }

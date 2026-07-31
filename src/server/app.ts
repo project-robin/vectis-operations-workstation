@@ -10,6 +10,7 @@ import { registerImportRoutes } from "./routes/imports.js";
 import { registerLeadRoutes } from "./routes/leads.js";
 import { registerManagerRoutes } from "./routes/manager.js";
 import { registerManagerMcpRoute } from "./routes/manager-mcp.js";
+import { registerOverviewRoutes } from "./routes/overview.js";
 import { registerDograhWebhook } from "./routes/webhooks/dograh.js";
 
 export interface AppOptions {
@@ -54,6 +55,7 @@ export function buildApp(options: AppOptions = {}): FastifyInstance {
     registerImportRoutes(app, options.database);
     registerLeadRoutes(app, options.database);
     registerDeliveryRoutes(app, options.database);
+    registerOverviewRoutes(app, options.database);
     if (options.dograhWebhookSecret) {
       registerDograhWebhook(app, options.database, options.dograhWebhookSecret);
     }

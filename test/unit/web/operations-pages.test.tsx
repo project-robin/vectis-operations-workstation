@@ -27,6 +27,12 @@ describe("operations pages", () => {
               phone: "+447700900123",
               classification: "valid",
               providerState: "completed",
+              callSummary: "Ada requested a quote and an evening callback.",
+              leadStatus: "qualified",
+              disposition: "user_qualified",
+              followUpRequired: true,
+              quoteRequested: true,
+              completedAt: timestamp,
             },
           ]),
         );
@@ -46,6 +52,15 @@ describe("operations pages", () => {
               id: providerRunId,
               state: "completed",
               providerWorkflowRunId: "dograh-run",
+              gatheredContext: {
+                call_summary: "Ada requested a quote and an evening callback.",
+                lead_status: "qualified",
+                hair_loss_concern: "crown",
+                quote_requested: "True",
+                follow_up_required: "True",
+              },
+              recordingUrl: "https://example.test/recording",
+              transcriptUrl: "https://example.test/transcript",
               createdAt: timestamp,
               completedAt: timestamp,
             },
@@ -69,6 +84,16 @@ describe("operations pages", () => {
     expect(await screen.findByRole("heading", { name: "Ada Lovelace" })).toBeVisible();
     expect(screen.getByText("Call completed")).toBeVisible();
     expect(screen.getByText("dograh · completed")).toBeVisible();
+    expect(screen.getByText("Ada requested a quote and an evening callback.")).toBeVisible();
+    expect(screen.getByText("Crown")).toBeVisible();
+    expect(screen.getByRole("link", { name: "Listen to recording" })).toHaveAttribute(
+      "href",
+      "https://example.test/recording",
+    );
+    expect(screen.getByRole("link", { name: "Read transcript" })).toHaveAttribute(
+      "href",
+      "https://example.test/transcript",
+    );
   });
 
   it("shows exhausted CRM delivery state", async () => {
@@ -81,6 +106,9 @@ describe("operations pages", () => {
             status: "dead",
             attempts: 5,
             providerRunId,
+            displayName: "Ada Lovelace",
+            callSummary: "Ada asked for pricing and a callback.",
+            destination: "Twenty CRM",
             nextAttemptAt: timestamp,
             lastError: "operator detail",
             completedAt: null,
@@ -92,6 +120,9 @@ describe("operations pages", () => {
     render(<DeliveriesPage fetcher={fetcher as typeof fetch} organizationId={organizationId} />);
 
     expect(await screen.findByText("Manual retry required")).toBeVisible();
+    expect(screen.getByText("CRM outcome delivery")).toBeVisible();
+    expect(screen.getByText("Ada Lovelace's call outcome")).toBeVisible();
+    expect(screen.getByText("Ada asked for pricing and a callback.")).toBeVisible();
     expect(screen.getByText("Twenty CRM")).toBeVisible();
   });
 
@@ -108,6 +139,15 @@ describe("operations pages", () => {
             retryable: true,
             occurredAt: timestamp,
           },
+          {
+            id: `follow-up-${providerRunId}`,
+            kind: "follow_up_required",
+            title: "Kabir needs follow-up",
+            summary: "Kabir requested pricing and an evening callback.",
+            leadId: 1,
+            retryable: false,
+            occurredAt: timestamp,
+          },
         ]),
       );
 
@@ -115,6 +155,8 @@ describe("operations pages", () => {
 
     expect(await screen.findByText("CRM update needs attention")).toBeVisible();
     expect(screen.getByText("Retry available")).toBeVisible();
+    expect(screen.getByText("Kabir needs follow-up")).toBeVisible();
+    expect(screen.getByText("Kabir requested pricing and an evening callback.")).toBeVisible();
     expect(screen.queryByText(/provider error/i)).not.toBeInTheDocument();
   });
 });

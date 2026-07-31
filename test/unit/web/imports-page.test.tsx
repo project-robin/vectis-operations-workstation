@@ -4,7 +4,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { ImportPreview } from "../../../src/web/api/imports.js";
+import type { ImportBatch, ImportPreview } from "../../../src/web/api/imports.js";
 import { ImportsPage } from "../../../src/web/pages/ImportsPage.js";
 
 afterEach(cleanup);
@@ -76,7 +76,7 @@ describe("Imports page", () => {
       expect.objectContaining({
         organizationId,
         filename: "synthetic.csv",
-        defaultCallingCode: "44",
+        defaultCallingCode: "91",
         csv: "synthetic csv",
       }),
     );
@@ -93,5 +93,32 @@ describe("Imports page", () => {
     await waitFor(() => expect(screen.getByText("Approved")).toBeInTheDocument());
     expect(changeStatus).toHaveBeenNthCalledWith(1, batchId, organizationId, "commit");
     expect(changeStatus).toHaveBeenNthCalledWith(2, batchId, organizationId, "approve");
+  });
+
+  it("shows recent import validation and approval history", async () => {
+    const history: ImportBatch[] = [
+      {
+        id: batchId,
+        organizationId,
+        filename: "kabir-pilot.csv",
+        defaultCallingCode: "91",
+        status: "approved",
+        summary: { total: 1, valid: 1, blockedConsent: 0, invalid: 0, duplicate: 0 },
+        createdAt: "2026-07-31T00:00:00.000Z",
+        committedAt: "2026-07-31T00:01:00.000Z",
+        approvedAt: "2026-07-31T00:02:00.000Z",
+      },
+    ];
+    render(
+      <ImportsPage
+        organizationId={organizationId}
+        loadHistory={vi.fn().mockResolvedValue(history)}
+      />,
+    );
+
+    expect(await screen.findByRole("heading", { name: "Recent imports" })).toBeVisible();
+    expect(screen.getByText("kabir-pilot.csv")).toBeVisible();
+    expect(screen.getByText("1 ready to call")).toBeVisible();
+    expect(screen.getByText("Approved")).toBeVisible();
   });
 });

@@ -40,6 +40,7 @@ const importPreviewSchema = importBatchSchema.extend({
 });
 
 export type ImportPreview = z.infer<typeof importPreviewSchema>;
+export type ImportBatch = z.infer<typeof importBatchSchema>;
 
 export interface StageCsvInput {
   organizationId: string;
@@ -85,4 +86,17 @@ export async function changeImportStatus(
   }
 
   return importBatchSchema.parse(await response.json());
+}
+
+export async function getImportHistory(
+  organizationId: string,
+  fetcher: typeof fetch = fetch,
+): Promise<ImportBatch[]> {
+  const response = await fetcher(
+    `/api/imports?organizationId=${encodeURIComponent(organizationId)}`,
+  );
+  if (!response.ok) {
+    throw new Error("Import history could not be loaded");
+  }
+  return importBatchSchema.array().parse(await response.json());
 }

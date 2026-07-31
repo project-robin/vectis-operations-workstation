@@ -7,10 +7,14 @@ import {
 } from "../api/event-stream.js";
 import { getComponentHealth } from "../api/health.js";
 import { AttentionPage } from "../pages/AttentionPage.js";
+import { CampaignsPage } from "../pages/CampaignsPage.js";
 import { DeliveriesPage } from "../pages/DeliveriesPage.js";
 import { ImportsPage } from "../pages/ImportsPage.js";
+import { IntegrationsPage } from "../pages/IntegrationsPage.js";
+import { LeadsPage } from "../pages/LeadsPage.js";
 import { LeadTracePage } from "../pages/LeadTracePage.js";
 import { LiveOperationsPage } from "../pages/LiveOperationsPage.js";
+import { OverviewPage } from "../pages/OverviewPage.js";
 
 const ownerItems = ["Overview", "Leads", "Campaigns", "Attention"];
 const operatorItems = ["Live Operations", "Imports", "Call Trace", "Deliveries", "Integrations"];
@@ -43,7 +47,7 @@ function NavigationGroup({ activePage, label, items, onSelect }: NavigationGroup
   );
 }
 
-function OverviewPage() {
+function EmptyOverviewPage() {
   return (
     <>
       <section className="page-heading">
@@ -106,13 +110,19 @@ export function App({
   fetcher = fetch,
 }: AppProps) {
   const [activePage, setActivePage] = useState("Overview");
+  const [selectedLeadId, setSelectedLeadId] = useState<number | null>(null);
   const [components, setComponents] = useState<ComponentHealth[]>([]);
   const [streamState, setStreamState] = useState<"connected" | "connecting" | "disconnected">(
     "disconnected",
   );
 
+  const openCallTrace = (leadId: number) => {
+    setSelectedLeadId(leadId);
+    setActivePage("Call Trace");
+  };
+
   useEffect(() => {
-    if (activePage !== "Live Operations" || !organizationId) {
+    if (!["Live Operations", "Integrations"].includes(activePage) || !organizationId) {
       return;
     }
 
@@ -133,6 +143,7 @@ export function App({
     };
 
     void refreshHealth();
+    const refreshTimer = setInterval(() => void refreshHealth(), 30_000);
 
     const availableFactory =
       eventSourceFactory ??
@@ -163,6 +174,7 @@ export function App({
 
     return () => {
       cancelled = true;
+      clearInterval(refreshTimer);
       disconnect();
     };
   }, [activePage, eventSourceFactory, fetcher, organizationId]);
@@ -198,8 +210,20 @@ export function App({
       </aside>
 
       <main id="main" className="main-content">
-        {activePage === "Live Operations" ? (
+        {activePage === "Overview" && organizationId ? (
+          <OverviewPage
+            fetcher={fetcher}
+            organizationId={organizationId}
+            onViewCall={openCallTrace}
+          />
+        ) : activePage === "Leads" && organizationId ? (
+          <LeadsPage fetcher={fetcher} organizationId={organizationId} onViewCall={openCallTrace} />
+        ) : activePage === "Campaigns" && organizationId ? (
+          <CampaignsPage fetcher={fetcher} organizationId={organizationId} />
+        ) : activePage === "Live Operations" ? (
           <LiveOperationsPage components={components} streamState={streamState} />
+        ) : activePage === "Integrations" ? (
+          <IntegrationsPage components={components} streamState={streamState} />
         ) : activePage === "Imports" ? (
           organizationId ? (
             <ImportsPage organizationId={organizationId} />
@@ -212,13 +236,17 @@ export function App({
             </section>
           )
         ) : activePage === "Call Trace" && organizationId ? (
-          <LeadTracePage fetcher={fetcher} organizationId={organizationId} />
+          <LeadTracePage
+            fetcher={fetcher}
+            initialLeadId={selectedLeadId}
+            organizationId={organizationId}
+          />
         ) : activePage === "Deliveries" && organizationId ? (
           <DeliveriesPage fetcher={fetcher} organizationId={organizationId} />
         ) : activePage === "Attention" && organizationId ? (
           <AttentionPage fetcher={fetcher} organizationId={organizationId} />
         ) : (
-          <OverviewPage />
+          <EmptyOverviewPage />
         )}
       </main>
     </div>

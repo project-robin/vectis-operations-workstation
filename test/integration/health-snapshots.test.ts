@@ -28,6 +28,7 @@ describe("health snapshots", () => {
   it("returns the latest component state for only the requested organization", async () => {
     const organizationId = randomUUID();
     const otherOrganizationId = randomUUID();
+    const checkedAt = new Date();
     await connection.db.insert(organizations).values([
       { id: organizationId, name: "Health organization" },
       { id: otherOrganizationId, name: "Other organization" },
@@ -39,7 +40,7 @@ describe("health snapshots", () => {
       status: "healthy",
       detail: "Ready",
       latencyMs: 3,
-      checkedAt: new Date("2026-07-31T00:00:00Z"),
+      checkedAt: new Date(checkedAt.getTime() - 1_000),
     });
     await recordHealthSnapshot(connection.db, {
       organizationId,
@@ -47,7 +48,7 @@ describe("health snapshots", () => {
       status: "down",
       detail: "Probe timed out",
       latencyMs: 5000,
-      checkedAt: new Date("2026-07-31T00:01:00Z"),
+      checkedAt,
     });
     await recordHealthSnapshot(connection.db, {
       organizationId: otherOrganizationId,
@@ -55,12 +56,37 @@ describe("health snapshots", () => {
       status: "healthy",
       detail: "Ready",
       latencyMs: 10,
-      checkedAt: new Date("2026-07-31T00:02:00Z"),
+      checkedAt,
     });
 
     const latest = await listLatestHealth(connection.db, organizationId);
 
     expect(latest).toHaveLength(1);
     expect(latest[0]).toMatchObject({ component: "database", status: "down" });
+  });
+
+  it("reports an old successful check as unknown", async () => {
+    const organizationId = randomUUID();
+    await connection.db
+      .insert(organizations)
+      .values({ id: organizationId, name: "Stale health organization" });
+    await recordHealthSnapshot(connection.db, {
+      organizationId,
+      component: "twenty",
+      status: "healthy",
+      detail: "Worker connected",
+      latencyMs: 4,
+      checkedAt: new Date(Date.now() - 120_000),
+    });
+
+    const latest = await listLatestHealth(connection.db, organizationId);
+
+    expect(latest).toEqual([
+      expect.objectContaining({
+        component: "twenty",
+        status: "unknown",
+        detail: "Last verified check is stale",
+      }),
+    ]);
   });
 });

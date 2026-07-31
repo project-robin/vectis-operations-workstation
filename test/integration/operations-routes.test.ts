@@ -61,7 +61,11 @@ describe("lead trace, deliveries, and attention routes", () => {
       workflowId: 9,
       providerWorkflowRunId: randomUUID(),
       state: "failed",
-      gatheredContext: { lead_status: "follow_up" },
+      gatheredContext: {
+        lead_status: "follow_up",
+        call_summary: "Ada asked for pricing and a callback.",
+        follow_up_required: "True",
+      },
       completedAt: new Date("2026-07-31T09:00:00.000Z"),
     });
     await connection.db.insert(outboxDeliveries).values({
@@ -76,6 +80,20 @@ describe("lead trace, deliveries, and attention routes", () => {
       lastError: "synthetic private provider error",
     });
     const app = buildApp({ database: connection.db });
+
+    const leads = await app.inject({
+      method: "GET",
+      url: `/api/leads?organizationId=${organizationId}`,
+    });
+    expect(leads.statusCode).toBe(200);
+    expect(leads.json()).toEqual([
+      expect.objectContaining({
+        id: lead.id,
+        callSummary: "Ada asked for pricing and a callback.",
+        leadStatus: "follow_up",
+        followUpRequired: true,
+      }),
+    ]);
 
     const trace = await app.inject({
       method: "GET",
@@ -99,7 +117,13 @@ describe("lead trace, deliveries, and attention routes", () => {
       url: `/api/deliveries?organizationId=${organizationId}`,
     });
     expect(deliveries.statusCode).toBe(200);
-    expect(deliveries.json()).toHaveLength(1);
+    expect(deliveries.json()).toEqual([
+      expect.objectContaining({
+        displayName: "Ada Lovelace",
+        callSummary: "Ada asked for pricing and a callback.",
+        destination: "Twenty CRM",
+      }),
+    ]);
 
     const attention = await app.inject({
       method: "GET",

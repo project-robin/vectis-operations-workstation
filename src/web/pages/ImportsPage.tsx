@@ -1,6 +1,8 @@
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import {
   changeImportStatus,
+  getImportHistory,
+  type ImportBatch,
   type ImportPreview,
   type StageCsvInput,
   stageCsvForPreview,
@@ -15,6 +17,7 @@ interface ImportsPageProps {
     action: "commit" | "approve",
   ) => Promise<Omit<ImportPreview, "rows">>;
   readFile?: (file: File) => Promise<string>;
+  loadHistory?: (organizationId: string) => Promise<ImportBatch[]>;
 }
 
 const defaultReadFile = (file: File) => file.text();
@@ -28,12 +31,29 @@ export function ImportsPage({
   stageForPreview = stageCsvForPreview,
   changeStatus = changeImportStatus,
   readFile = defaultReadFile,
+  loadHistory = getImportHistory,
 }: ImportsPageProps) {
   const [file, setFile] = useState<File | null>(null);
-  const [defaultCallingCode, setDefaultCallingCode] = useState("44");
+  const [defaultCallingCode, setDefaultCallingCode] = useState("91");
   const [preview, setPreview] = useState<ImportPreview | null>(null);
+  const [history, setHistory] = useState<ImportBatch[]>([]);
+  const [historyError, setHistoryError] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void loadHistory(organizationId)
+      .then((items) => {
+        if (!cancelled) setHistory(items);
+      })
+      .catch(() => {
+        if (!cancelled) setHistoryError(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [loadHistory, organizationId]);
 
   const submitPreview = async (event: FormEvent) => {
     event.preventDefault();
@@ -168,6 +188,39 @@ export function ImportsPage({
           </div>
         </section>
       ) : null}
+
+      <section className="section-block" aria-labelledby="import-history-title">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Audit trail</p>
+            <h2 id="import-history-title">Recent imports</h2>
+          </div>
+        </div>
+        {historyError ? (
+          <div className="stream-warning">Import history could not be loaded.</div>
+        ) : null}
+        <div className="import-history-list">
+          {history.map((batch) => (
+            <article className="import-history-card" key={batch.id}>
+              <div>
+                <strong>{batch.filename}</strong>
+                <span>{new Date(batch.createdAt).toLocaleString()}</span>
+              </div>
+              <div className="tag-row">
+                <span>{batch.summary.valid} ready to call</span>
+                {batch.summary.blockedConsent ? (
+                  <span>{batch.summary.blockedConsent} consent blocked</span>
+                ) : null}
+                {batch.summary.invalid ? <span>{batch.summary.invalid} invalid</span> : null}
+              </div>
+              <span className={`health-badge health-${batch.status}`}>
+                {displayStatus(batch.status)}
+              </span>
+            </article>
+          ))}
+          {!history.length && !historyError ? <p>No previous imports.</p> : null}
+        </div>
+      </section>
     </section>
   );
 }

@@ -83,6 +83,25 @@ describe("import API", () => {
 
       expect(committed.json()).toMatchObject({ status: "committed" });
       expect(approved.json()).toMatchObject({ status: "approved" });
+
+      const history = await app.inject({
+        method: "GET",
+        url: `/api/imports?organizationId=${organizationId}`,
+      });
+      const otherHistory = await app.inject({
+        method: "GET",
+        url: `/api/imports?organizationId=${otherOrganizationId}`,
+      });
+      expect(history.statusCode).toBe(200);
+      expect(history.json()).toEqual([
+        expect.objectContaining({
+          id: stagedBody.id,
+          filename: "synthetic.csv",
+          status: "approved",
+          summary: { total: 2, valid: 1, blockedConsent: 1, invalid: 0, duplicate: 0 },
+        }),
+      ]);
+      expect(otherHistory.json()).toEqual([]);
     } finally {
       await app.close();
     }

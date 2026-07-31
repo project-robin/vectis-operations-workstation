@@ -40,37 +40,49 @@ export function DeliveriesPage({ organizationId, fetcher = fetch }: DeliveriesPa
           <p>Twenty updates appear here after a Dograh call completes.</p>
         </div>
       ) : (
-        <div className="table-shell">
-          <table>
-            <thead>
-              <tr>
-                <th scope="col">Destination</th>
-                <th scope="col">Status</th>
-                <th scope="col">Attempts</th>
-                <th scope="col">Next action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {deliveries.map((delivery) => (
-                <tr key={delivery.id}>
-                  <td>Twenty CRM</td>
-                  <td>
-                    <span className={`health-badge health-${delivery.status}`}>
-                      {delivery.status}
-                    </span>
-                  </td>
-                  <td>{delivery.attempts}</td>
-                  <td>
+        <div className="delivery-list section-block">
+          {deliveries.map((delivery) => (
+            <article className="delivery-card" key={delivery.id}>
+              <div className="outcome-heading">
+                <div>
+                  <p className="eyebrow">CRM outcome delivery</p>
+                  <h2>
+                    {delivery.displayName
+                      ? `${delivery.displayName}'s call outcome`
+                      : "Call outcome update"}
+                  </h2>
+                </div>
+                <span className={`health-badge health-${delivery.status}`}>{delivery.status}</span>
+              </div>
+              <p>{delivery.callSummary ?? "No business summary was attached to this update."}</p>
+              <dl className="detail-grid">
+                <div>
+                  <dt>Destination</dt>
+                  <dd>{delivery.destination}</dd>
+                </div>
+                <div>
+                  <dt>Attempts</dt>
+                  <dd>{delivery.attempts}</dd>
+                </div>
+                <div>
+                  <dt>Next action</dt>
+                  <dd>
                     {delivery.status === "dead"
                       ? "Manual retry required"
                       : delivery.status === "succeeded"
                         ? "Complete"
                         : new Date(delivery.nextAttemptAt).toLocaleString()}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </dd>
+                </div>
+              </dl>
+              <div className="card-footer">
+                <time dateTime={delivery.completedAt ?? delivery.createdAt}>
+                  {new Date(delivery.completedAt ?? delivery.createdAt).toLocaleString()}
+                </time>
+                <span>Delivery ID {delivery.id.slice(0, 8)}</span>
+              </div>
+            </article>
+          ))}
         </div>
       )}
     </section>

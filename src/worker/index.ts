@@ -4,6 +4,9 @@ import { McpHttpClient } from "../server/adapters/mcp/http-client.js";
 import { TwentyAdapter } from "../server/adapters/twenty/adapter.js";
 import { createDatabase } from "../server/db/client.js";
 import { migrateDatabase } from "../server/db/migrate.js";
+import { organizations } from "../server/db/schema/organizations.js";
+import { appendEvent } from "../server/events/event-ledger.js";
+import { recordHealthSnapshot } from "../server/health/health-repository.js";
 import { runOutboxBatch } from "./outbox-worker.js";
 import { deliverTwentyCallOutcome } from "./twenty-outbox-handler.js";
 
@@ -40,6 +43,30 @@ async function main(): Promise<void> {
     const adapter = new TwentyAdapter((toolName, args) =>
       twentyMcp.callTool("execute_tool", { toolName, arguments: args }),
     );
+    let nextHealthAt = 0;
+
+    const publishTwentyHealth = async () => {
+      const tenantRows = await connection.db.select({ id: organizations.id }).from(organizations);
+      const checkedAt = new Date();
+      await Promise.all(
+        tenantRows.flatMap(({ id: organizationId }) => [
+          recordHealthSnapshot(connection.db, {
+            organizationId,
+            component: "twenty",
+            status: "healthy",
+            detail: "CRM worker MCP session connected",
+            latencyMs: 0,
+            checkedAt,
+          }),
+          appendEvent(connection.db, {
+            organizationId,
+            eventType: "health.checked",
+            payload: { component: "twenty", status: "healthy", latencyMs: 0 },
+          }),
+        ]),
+      );
+      nextHealthAt = Date.now() + 60_000;
+    };
 
     while (!stop.signal.aborted) {
       await runOutboxBatch(
@@ -50,6 +77,9 @@ async function main(): Promise<void> {
         },
         new Date(),
       );
+      if (Date.now() >= nextHealthAt) {
+        await publishTwentyHealth();
+      }
       try {
         await delay(environment.OUTBOX_POLL_MS, undefined, { signal: stop.signal });
       } catch (error) {
