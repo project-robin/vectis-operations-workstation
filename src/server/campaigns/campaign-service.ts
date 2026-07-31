@@ -117,9 +117,18 @@ export async function startApprovedCampaign(
       }
       const correlations = rows.map((row) => ({ row, providerRunId: randomUUID() }));
       const csv = [
-        "phone_number,workstation_lead_id,workstation_provider_run_id",
+        "phone_number,first_name,last_name,email,workstation_lead_id,workstation_provider_run_id",
         ...correlations.map(({ row, providerRunId }) =>
-          [row.normalizedPhone ?? "", String(row.id), providerRunId].map(csvCell).join(","),
+          [
+            row.normalizedPhone ?? "",
+            row.firstName ?? "",
+            row.lastName ?? "",
+            row.email ?? "",
+            String(row.id),
+            providerRunId,
+          ]
+            .map(csvCell)
+            .join(","),
         ),
       ].join("\n");
 

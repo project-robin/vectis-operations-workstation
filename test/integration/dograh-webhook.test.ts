@@ -35,12 +35,12 @@ describe("Dograh webhook", () => {
     const payload = {
       workflow_run_id: providerWorkflowRunId,
       workstation_provider_run_id: providerRunId,
-      campaign_id: 17,
-      workflow_id: 9,
+      campaign_id: "17",
+      workflow_id: "9",
       state: "completed",
       gathered_context: { lead_status: "qualified" },
-      recording_url: "https://example.test/recording",
-      transcript_url: null,
+      recording_url: "",
+      transcript_url: "",
     };
 
     try {
@@ -86,6 +86,8 @@ describe("Dograh webhook", () => {
         providerWorkflowRunId,
         state: "completed",
         gatheredContext: { lead_status: "qualified" },
+        recordingUrl: null,
+        transcriptUrl: null,
       });
       const events = await listEventsAfter(connection.db, { organizationId, afterId: 0 });
       expect(events.filter((event) => event.eventType === "dograh.run.completed")).toHaveLength(1);

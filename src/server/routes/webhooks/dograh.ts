@@ -4,15 +4,22 @@ import { z } from "zod";
 import type { Database } from "../../db/client.js";
 import { projectDograhCallback } from "../../providers/project-dograh-callback.js";
 
+const renderedIdSchema = z.coerce.number().int().positive();
+const renderedUrlSchema = z
+  .union([z.literal(""), z.url(), z.null()])
+  .transform((value) => value || null)
+  .optional()
+  .default(null);
+
 const callbackSchema = z.object({
   workflow_run_id: z.union([z.string().min(1), z.number().int().positive()]).transform(String),
   workstation_provider_run_id: z.uuid(),
-  campaign_id: z.number().int().positive(),
-  workflow_id: z.number().int().positive(),
+  campaign_id: renderedIdSchema,
+  workflow_id: renderedIdSchema,
   state: z.enum(["completed", "failed"]),
   gathered_context: z.record(z.string(), z.unknown()).default({}),
-  recording_url: z.url().nullable().optional().default(null),
-  transcript_url: z.url().nullable().optional().default(null),
+  recording_url: renderedUrlSchema,
+  transcript_url: renderedUrlSchema,
 });
 
 function secretMatches(provided: string | undefined, expected: string): boolean {

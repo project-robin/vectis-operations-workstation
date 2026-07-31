@@ -75,7 +75,13 @@ describe("campaign approval", () => {
     expect(dograh.uploadCampaignCsv).toHaveBeenCalledTimes(1);
     expect(dograh.uploadCampaignCsv).toHaveBeenCalledWith(
       expect.stringMatching(/\.csv$/),
-      expect.stringContaining("workstation_provider_run_id"),
+      expect.stringContaining(
+        "phone_number,first_name,last_name,email,workstation_lead_id,workstation_provider_run_id",
+      ),
+    );
+    expect(dograh.uploadCampaignCsv).toHaveBeenCalledWith(
+      expect.stringMatching(/\.csv$/),
+      expect.stringContaining("+447700900123,Ada"),
     );
     const correlations = await connection.db
       .select()
