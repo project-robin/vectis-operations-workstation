@@ -1,0 +1,25 @@
+# Private operational inputs
+/phase1_cleaned_leads.csv
+/phase1_cleaned_leads_enriched.csv
+/phase2_cleaned_leads.csv
+/private-inputs/
+*.private.csv
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Dependencies and generated output
+node_modules/
+dist/
+coverage/
+playwright-report/
+test-results/
+.vite/
+*.tsbuildinfo
+
+# Local tooling
+.DS_Store
+/.hermes/
+/hermes-vectisplan.md
