@@ -1,7 +1,28 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.5.6/schema.json",
   "files": {
-    "includes": ["**", "!!node_modules", "!!dist", "!!coverage", "!!.hermes", "!!db/migrations"]
+    "includes": [
+      "app/**",
+      "components/**",
+      "convex/schema.ts",
+      "convex/auth.config.ts",
+      "convex/convex.config.ts",
+      "convex/http.ts",
+      "convex/crons.ts",
+      "convex/toolchain.ts",
+      "convex/toolchain.test.ts",
+      "convex/nodeActions.ts",
+      "middleware.ts",
+      "next.config.ts",
+      "playwright.config.ts",
+      "package.json",
+      "tsconfig.json",
+      "vitest.config.ts",
+      "convex.json",
+      "scripts/**",
+      "test/components/**",
+      "test/e2e/**"
+    ]
   },
   "formatter": {
     "enabled": true,

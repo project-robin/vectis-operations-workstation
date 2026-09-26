@@ -1,2 +1,0 @@
-ALTER TABLE "provider_runs" ADD COLUMN "import_row_id" integer;--> statement-breakpoint
-ALTER TABLE "provider_runs" ADD CONSTRAINT "provider_runs_import_row_id_import_rows_id_fk" FOREIGN KEY ("import_row_id") REFERENCES "public"."import_rows"("id") ON DELETE set null ON UPDATE no action;

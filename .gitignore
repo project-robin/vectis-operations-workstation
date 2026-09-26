@@ -14,12 +14,19 @@
 node_modules/
 dist/
 coverage/
+.next/
+.convex/
 playwright-report/
 test-results/
-.vite/
 *.tsbuildinfo
 
 # Local tooling
 .DS_Store
 /.hermes/
 /hermes-vectisplan.md
+
+# clerk configuration (can include secrets)
+/.clerk/
+
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+/graft/

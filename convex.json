@@ -1,0 +1,10 @@
+{
+  "$schema": "https://schemas.convex.dev/convex.schema.json",
+  "functions": "convex/",
+  "nodeVersion": "22",
+  "codegen": {
+    "fileType": "js/dts",
+    "staticApi": true,
+    "staticDataModel": true
+  }
+}

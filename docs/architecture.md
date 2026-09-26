@@ -14,20 +14,19 @@
 - **Twenty:** CRM contacts, notes, opportunities, tasks, and appointment records.
 - **Hermes:** owner-facing manager using narrow Workstation tools; never a live-call participant.
 
-## Application shape
+## Application shape (see ADR-0003)
 
-A single TypeScript repository contains:
+The application uses only Next.js App Router + Convex + Clerk. The retired server, database, browser-client, and worker implementations remain available only in Git history; no compatibility runtime or dual-write path is retained. Platform seams:
 
-- React/Vite browser client;
-- Fastify API, webhook, and SSE server;
-- separately started outbox/health worker;
-- PostgreSQL operational database.
+- `app/`, `components/`, `lib/` — Next.js pages, shell, UI helpers;
+- `convex/` — schema, public queries/mutations, internal mutations/actions, HTTP routes, crons, domain modules;
+- `scripts/` — verified administrative tools only.
 
-The browser and process memory are never authoritative operational stores.
+Convex HTTP actions own external webhook ingress; Convex mutations are the atomic state-transition seam; Convex subscriptions replace custom SSE; append-only operation events remain durable audit history. Clerk supplies identity; every Convex function independently enforces organization membership and role.
 
 ## Runtime decision
 
-Development reuses the installed Node.js 22.22.2 runtime. The package requires Node.js `>=22.12.0`, which satisfies TypeScript 7, Vite 8, Vitest 4, and Playwright requirements without downloading an additional runtime.
+Development reuses the installed Node.js 22.22.2 runtime. The package requires Node.js `>=22.12.0`, which satisfies the Next.js, Convex, Clerk, TypeScript, Vitest, and Playwright requirements without downloading an additional runtime.
 
 ## Private data
 
