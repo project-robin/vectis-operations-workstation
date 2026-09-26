@@ -910,7 +910,6 @@ body {
   .stat-grid > :last-child:nth-child(odd) {
     grid-column: 1 / -1;
   }
-
 }
 
 .form {

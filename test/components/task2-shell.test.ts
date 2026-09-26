@@ -51,7 +51,7 @@ test("ClerkProvider contains ConvexProviderWithClerk", async () => {
   const { ConvexClientProvider } = await import("@/components/providers/ConvexClientProvider");
   const tree = RootLayout({ children: createElement("p", null, "shell") });
   const html = tree.props.children;
-  const body = html.props.children;
+  const body = [html.props.children].flat().find((child) => child?.type === "body");
   const convex = body.props.children;
   expect(convex.type).toBe(ConvexClientProvider);
   expect(body.props.children).toBe(convex);
@@ -81,19 +81,42 @@ test("the reactive component exposes a mutation that the protected lane can exer
   expect(state.recordProbe).toHaveBeenCalledWith({ label: "shell" });
 });
 
-test("the application page renders the reactive component through its provider tree (unit seam)", async () => {
+test("workspace routes render inside the shared shell and provider tree (unit seam)", async () => {
+  // jsdom has no matchMedia; the Astryx app shell reads it for responsive layout.
+  window.matchMedia ??= ((query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    addListener: () => {},
+    removeListener: () => {},
+    dispatchEvent: () => false,
+  })) as typeof window.matchMedia;
+  // The shared useQuery mock returns this value; any truthy value opens the workspace gate.
+  state.probeCount = 1;
   const { ClerkProvider } = await import("@clerk/nextjs");
-  const { default: Home } = await import("@/app/(workspace)/page");
+  const { default: WorkspaceLayout } = await import("@/app/(workspace)/layout");
   const { ConvexClientProvider } = await import("@/components/providers/ConvexClientProvider");
+  const { VectisThemeProvider } = await import("@/components/providers/VectisThemeProvider");
 
   render(
     createElement(
       ClerkProvider,
       null,
-      createElement(ConvexClientProvider, null, createElement(Home)),
+      createElement(
+        ConvexClientProvider,
+        null,
+        createElement(
+          VectisThemeProvider,
+          null,
+          createElement(WorkspaceLayout, null, createElement("h1", null, "Dashboard page")),
+        ),
+      ),
     ),
   );
-  expect(screen.getByRole("navigation", { name: "Main" })).toBeInTheDocument();
+  expect(screen.getByRole("navigation", { name: "Side navigation" })).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "Dashboard" })).toHaveAttribute("aria-current", "page");
-  expect(screen.getByRole("link", { name: "Quick Call" })).toHaveAttribute("href", "/quick-call");
+  expect(screen.getByRole("link", { name: "Quick call" })).toHaveAttribute("href", "/quick-call");
+  expect(screen.getByRole("heading", { name: "Dashboard page" })).toBeInTheDocument();
 });
