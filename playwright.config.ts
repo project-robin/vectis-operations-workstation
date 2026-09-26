@@ -56,8 +56,11 @@ export default defineConfig({
   },
   projects: [{ name: "chromium-installed", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
-    command: `npm run dev -- --hostname 127.0.0.1 --port ${port}`,
-    url: `http://127.0.0.1:${port}`,
+    // No --hostname: Clerk middleware rewrites via http://localhost, which must
+    // resolve (IPv4 or IPv6) back to this server.
+    command: `npm run dev -- --port ${port}`,
+    // /sign-in is public, so readiness does not depend on the Clerk handshake.
+    url: `http://127.0.0.1:${port}/sign-in`,
     reuseExistingServer: false,
     timeout: 120_000,
   },

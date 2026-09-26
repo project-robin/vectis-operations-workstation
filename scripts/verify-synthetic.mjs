@@ -17,14 +17,22 @@ const commands = [
   ["run", "test:e2e"],
 ];
 
+// Clerk middleware refuses to start without a secret key. This fixed fake value
+// is set after sanitizing, so a real inherited CLERK_SECRET_KEY never reaches
+// synthetic children.
+export const SYNTHETIC_CLERK_SECRET_KEY = "sk_test_synthetic_not_a_real_key";
+
 export function createSyntheticEnvironment(homeDirectory, source = process.env) {
-  return sanitizeEnvironment(source, {
-    HOME: homeDirectory,
-    NODE_ENV: "test",
-    NEXT_PUBLIC_CONVEX_URL: "https://task2-synthetic.invalid",
-    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: "pk_test_Y2xlcmsuZXhhbXBsZS5jb20k",
-    PLAYWRIGHT_EXECUTABLE_PATH: source.PLAYWRIGHT_EXECUTABLE_PATH,
-  });
+  return {
+    ...sanitizeEnvironment(source, {
+      HOME: homeDirectory,
+      NODE_ENV: "test",
+      NEXT_PUBLIC_CONVEX_URL: "https://task2-synthetic.invalid",
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: "pk_test_Y2xlcmsuZXhhbXBsZS5jb20k",
+      PLAYWRIGHT_EXECUTABLE_PATH: source.PLAYWRIGHT_EXECUTABLE_PATH,
+    }),
+    CLERK_SECRET_KEY: SYNTHETIC_CLERK_SECRET_KEY,
+  };
 }
 
 export function main() {

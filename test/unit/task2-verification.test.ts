@@ -15,7 +15,10 @@ import {
   validateOfficialDeploymentIdentity,
 } from "../../scripts/verify-protected.mjs";
 import { validateGeneratedStructure } from "../../scripts/check-generated-structure.mjs";
-import { createSyntheticEnvironment } from "../../scripts/verify-synthetic.mjs";
+import {
+  createSyntheticEnvironment,
+  SYNTHETIC_CLERK_SECRET_KEY,
+} from "../../scripts/verify-synthetic.mjs";
 
 const packageJson = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8"));
 const playwrightConfig = readFileSync(
@@ -121,6 +124,17 @@ test("synthetic children use an empty temporary HOME", () => {
     NODE_ENV: "test",
   });
   expect(env).toHaveProperty("HOME", "/tmp/task2-empty-home");
+});
+
+test("synthetic children get a fixed fake Clerk secret, never the inherited one", () => {
+  const env = createSyntheticEnvironment("/tmp/task2-empty-home", {
+    PATH: "/bin",
+    HOME: "/home/real-user",
+    NODE_ENV: "test",
+    CLERK_SECRET_KEY: "sk_live_real_secret",
+  });
+  expect(env.CLERK_SECRET_KEY).toBe(SYNTHETIC_CLERK_SECRET_KEY);
+  expect(Object.values(env)).not.toContain("sk_live_real_secret");
 });
 
 test("Playwright port parsing rejects shell and out-of-range values", () => {

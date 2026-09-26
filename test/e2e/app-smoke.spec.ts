@@ -1,39 +1,67 @@
 import { expect, test } from "@playwright/test";
 
-const ownerRoutes = ["/home", "/customers", "/conversations", "/tasks", "/agents", "/analytics"];
-const operationRoutes = [
+// The synthetic lane runs with fake Clerk keys, so no browser can finish the
+// Clerk handshake here. It proves the server boots and that every workspace
+// route sits behind Clerk middleware. Signed-in UI flows run in the protected
+// lane (test/protected) against real Clerk + Convex.
+
+const workspaceRoutes = [
+  "/",
+  "/onboarding",
+  "/quick-call",
+  "/calls",
+  "/calls/synthetic-call",
+  "/leads",
+  "/campaigns",
+  "/home",
+  "/customers",
+  "/customers/synthetic-customer",
+  "/conversations",
+  "/conversations/synthetic-conversation",
+  "/tasks",
+  "/agents",
+  "/analytics",
+  "/settings",
+  "/workstation",
+  "/operations/live-operations",
   "/operations/imports",
   "/operations/campaigns",
   "/operations/deliveries",
   "/operations/integrations",
-  "/operations/live-operations",
   "/operations/audit",
 ];
 
-test("root is the Vectis workstation home", async ({ page }) => {
-  const response = await page.goto("/");
-  expect(response?.status()).toBe(200);
-  await expect(page.getByRole("heading", { name: "Vectis today" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Customers" })).toBeVisible();
-  await expect(page.getByRole("textbox", { name: /ask vectis/i })).toBeVisible();
-  await expect(page.getByText(/commercial evidence required/i)).toBeVisible();
-  await expect(page.getByText(/ProbeCount|Record probe/i)).toHaveCount(0);
+const documentRequest = { accept: "text/html", "sec-fetch-dest": "document" };
+
+test("the public sign-in route renders the Vectis brand", async ({ request }) => {
+  const response = await request.get("/sign-in");
+  expect(response.status()).toBe(200);
+  const html = await response.text();
+  expect(html).toContain("Vectis — AI Receptionist");
 });
 
-test("all owner and operations destinations are navigable", async ({ page }) => {
+test("anonymous page loads of workspace routes are sent to Clerk to sign in", async ({
+  request,
+}) => {
   test.slow();
-  for (const route of [...ownerRoutes, ...operationRoutes]) {
-    const response = await page.goto(route);
-    expect(response?.status(), route).toBe(200);
-    await expect(page.locator("main")).toBeVisible();
-    await expect(page.getByRole("link", { name: "Home" })).toBeVisible();
+  for (const route of workspaceRoutes) {
+    const response = await request.get(route, { headers: documentRequest, maxRedirects: 0 });
+    expect(response.status(), route).toBe(307);
+    // Depending on Clerk's dev-browser cookie and configured sign-in URL, this is
+    // the Clerk handshake, Clerk's hosted sign-in, or the app's own /sign-in.
+    const location = new URL(response.headers().location ?? "", response.url());
+    expect(location.pathname, route).toMatch(/\/v1\/client\/handshake$|\/sign-in$/);
+    expect(location.searchParams.get("redirect_url"), route).toMatch(new RegExp(`:\\d+${route}$`));
   }
 });
 
-test("operations drawer and mobile navigation have usable controls", async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/customers");
-  await page.getByRole("button", { name: /operations/i }).click();
-  await expect(page.getByRole("link", { name: "Imports" })).toBeVisible();
-  await expect(page.locator("body")).toHaveCSS("overflow-x", "hidden");
+test("anonymous data requests to workspace routes never receive the workstation", async ({
+  request,
+}) => {
+  test.slow();
+  for (const route of workspaceRoutes) {
+    const response = await request.get(route, { maxRedirects: 0 });
+    expect(response.status(), route).toBe(404);
+    expect(await response.text(), route).not.toContain("Side navigation");
+  }
 });
